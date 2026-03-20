@@ -208,11 +208,11 @@ function useBreakpoint(bp = 768) {
    already constrains width. w-full on a
    flex/grid child can force 100% stretch.
 ───────────────────────────────────── */
-function Container({ children, className = '' }) {
+function Container({ children, className = '', style = {} }) {
   return (
     <div
       className={`max-w-6xl mx-auto px-6 lg:px-10 ${className}`}
-      style={{ width: '100%', boxSizing: 'border-box' }}
+      style={{ width: '100%', boxSizing: 'border-box', ...style }}
     >
       {children}
     </div>
