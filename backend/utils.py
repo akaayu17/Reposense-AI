@@ -11,7 +11,7 @@ embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Groq for fast AI chat inference (Llama 3)
 groq_client = OpenAI(
-    api_key=os.environ.get("GROQ_API_KEY", "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"),
+    api_key=os.environ.get("GROQ_API_KEY", "Enter your api key"),
     base_url="https://api.groq.com/openai/v1"
 )
 
