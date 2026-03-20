@@ -1,167 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import RepoInput from './components/RepoInput';
 import ChatInterface from './components/ChatInterface';
 import SummaryView from './components/SummaryView';
 import { loadRepo } from './services/api';
 import {
   Github, MessageSquare, FileText, Code2, Network, Zap,
-  ChevronRight, Cpu, Activity, Shield, ArrowRight,
+  ChevronRight, Cpu, Activity, Shield, ArrowRight, Terminal,
+  GitBranch, Search, BarChart3, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-/* ─────────────────────────────────────
-   STARFIELD CANVAS
-   — static stars that gently twinkle
-───────────────────────────────────── */
-function StarCanvas() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let W, H, raf;
-    let stars = [];
-
-    function init() {
-      W = canvas.width  = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-      stars = [];
-      // layer 1 – tiny dim background stars
-      for (let i = 0; i < 220; i++) {
-        stars.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          r: Math.random() * 0.55 + 0.2,
-          base: Math.random() * 0.35 + 0.1,
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.008 + 0.003,
-          color: '#ffffff',
-        });
-      }
-      // layer 2 – mid stars, slight colour tint
-      for (let i = 0; i < 80; i++) {
-        const tints = ['#c7e8ff', '#ddd8ff', '#ffffff'];
-        stars.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          r: Math.random() * 0.9 + 0.5,
-          base: Math.random() * 0.45 + 0.15,
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.006 + 0.002,
-          color: tints[Math.floor(Math.random() * tints.length)],
-        });
-      }
-      // layer 3 – a handful of brighter accent stars with glow
-      for (let i = 0; i < 18; i++) {
-        const accents = ['#38bdf8', '#818cf8', '#c084fc', '#ffffff'];
-        stars.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          r: Math.random() * 1.4 + 0.9,
-          base: Math.random() * 0.6 + 0.3,
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.005 + 0.002,
-          color: accents[Math.floor(Math.random() * accents.length)],
-          glow: true,
-        });
-      }
-    }
-
-    init();
-    window.addEventListener('resize', init);
-
-    function loop() {
-      ctx.clearRect(0, 0, W, H);
-      const t = performance.now() * 0.001;
-
-      stars.forEach(s => {
-        const alpha = s.base + (Math.sin(s.phase + t * s.speed * 60) * 0.5 + 0.5) * (1 - s.base) * 0.7;
-
-        if (s.glow) {
-          const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
-          g.addColorStop(0, s.color + Math.floor(alpha * 180).toString(16).padStart(2, '0'));
-          g.addColorStop(1, s.color + '00');
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
-          ctx.fillStyle = g;
-          ctx.fill();
-        }
-
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = s.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-        ctx.fill();
-      });
-
-      raf = requestAnimationFrame(loop);
-    }
-    loop();
-
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', init); };
-  }, []);
-  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-}
-
-/* ─────────────────────────────────────
-   NETWORK GRAPH CANVAS
-───────────────────────────────────── */
-function NetworkGraph() {
-  const canvasRef = useRef(null), rafRef = useRef(null);
-  const nodesRef = useRef([]), mouseRef = useRef({ x: -999, y: -999 });
-  useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d'); const dpr = window.devicePixelRatio || 1;
-    const resize = () => { canvas.width = canvas.offsetWidth * dpr; canvas.height = canvas.offsetHeight * dpr; ctx.scale(dpr, dpr); };
-    resize(); window.addEventListener('resize', resize);
-    const W = () => canvas.offsetWidth, H = () => canvas.offsetHeight;
-    const COLORS = ['#38bdf8', '#818cf8', '#c084fc', '#34d399'];
-    const LABELS = ['main.js', 'api/', 'utils', 'db', 'auth', 'config', 'index', 'routes', 'models', 'tests', 'hooks', 'store'];
-    nodesRef.current = Array.from({ length: 22 }, () => ({
-      x: Math.random() * W(), y: Math.random() * H(),
-      vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35,
-      r: Math.random() * 2 + 1.5, phase: Math.random() * Math.PI * 2,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      label: LABELS[Math.floor(Math.random() * LABELS.length)],
-    }));
-    function tick() {
-      ctx.clearRect(0, 0, W(), H()); const ns = nodesRef.current;
-      ns.forEach(n => {
-        n.x += n.vx; n.y += n.vy; n.phase += 0.016;
-        if (n.x < 0 || n.x > W()) n.vx *= -1;
-        if (n.y < 0 || n.y > H()) n.vy *= -1;
-        const dx = n.x - mouseRef.current.x, dy = n.y - mouseRef.current.y, d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 100) { n.vx += (dx / d) * 0.06; n.vy += (dy / d) * 0.06; }
-        const spd = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
-        if (spd > 1.5) { n.vx *= 0.93; n.vy *= 0.93; }
-      });
-      for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) {
-        const dx = ns[i].x - ns[j].x, dy = ns[i].y - ns[j].y, dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 130) {
-          const a = (1 - dist / 130) * 0.28, hex = Math.floor(a * 255).toString(16).padStart(2, '0');
-          const g = ctx.createLinearGradient(ns[i].x, ns[i].y, ns[j].x, ns[j].y);
-          g.addColorStop(0, ns[i].color + hex); g.addColorStop(1, ns[j].color + hex);
-          ctx.beginPath(); ctx.moveTo(ns[i].x, ns[i].y); ctx.lineTo(ns[j].x, ns[j].y);
-          ctx.strokeStyle = g; ctx.lineWidth = a * 2; ctx.stroke();
-        }
-      }
-      ns.forEach(n => {
-        const glow = Math.sin(n.phase) * 0.5 + 0.5;
-        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 6);
-        grad.addColorStop(0, n.color + '44'); grad.addColorStop(1, n.color + '00');
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 6, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r + glow, 0, Math.PI * 2);
-        ctx.fillStyle = n.color; ctx.shadowBlur = 12; ctx.shadowColor = n.color; ctx.fill(); ctx.shadowBlur = 0;
-        ctx.font = '9px monospace'; ctx.fillStyle = n.color + '88'; ctx.fillText(n.label, n.x + n.r + 3, n.y + 3);
-      });
-      rafRef.current = requestAnimationFrame(tick);
-    }
-    tick();
-    const onMove = e => { const r = canvas.getBoundingClientRect(); mouseRef.current = { x: e.clientX - r.left, y: e.clientY - r.top }; };
-    canvas.addEventListener('mousemove', onMove);
-    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('resize', resize); canvas.removeEventListener('mousemove', onMove); };
-  }, []);
-  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
-}
 
 /* ─────────────────────────────────────
    TYPEWRITER
@@ -187,11 +34,12 @@ function useTypewriter(words, speed = 85, pause = 2000) {
 }
 
 /* ─────────────────────────────────────
-   RESPONSIVE GRID HOOK
-   Returns true when viewport >= breakpoint px
+   BREAKPOINT HOOK
 ───────────────────────────────────── */
 function useBreakpoint(bp = 768) {
-  const [matches, setMatches] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= bp : false);
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= bp : false
+  );
   useEffect(() => {
     const mq = window.matchMedia(`(min-width: ${bp}px)`);
     const handler = (e) => setMatches(e.matches);
@@ -203,16 +51,13 @@ function useBreakpoint(bp = 768) {
 }
 
 /* ─────────────────────────────────────
-   CONTAINER  max-w-6xl, always centered
-   FIX: removed w-full — max-w-6xl + mx-auto
-   already constrains width. w-full on a
-   flex/grid child can force 100% stretch.
+   CONTAINER
 ───────────────────────────────────── */
 function Container({ children, className = '', style = {} }) {
   return (
     <div
-      className={`max-w-6xl mx-auto px-6 lg:px-10 ${className}`}
-      style={{ width: '100%', boxSizing: 'border-box', ...style }}
+      className={className}
+      style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 2rem', width: '100%', boxSizing: 'border-box', ...style }}
     >
       {children}
     </div>
@@ -220,26 +65,82 @@ function Container({ children, className = '', style = {} }) {
 }
 
 /* ─────────────────────────────────────
-   SECTION  consistent vertical rhythm
+   SECTION
 ───────────────────────────────────── */
-function Section({ children, className = '' }) {
+function Section({ children, style = {} }) {
   return (
-    <section className={`py-16 ${className}`} style={{ width: '100%' }}>
+    <section style={{ width: '100%', padding: '5rem 0', ...style }}>
       <Container>{children}</Container>
     </section>
   );
 }
 
 /* ─────────────────────────────────────
+   RESPONSIVE GRID
+───────────────────────────────────── */
+function Grid({ cols = { mobile: 1, desktop: 3 }, gap = '1.5rem', children }) {
+  const isDesktop = useBreakpoint(768);
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: `repeat(${isDesktop ? cols.desktop : cols.mobile}, minmax(0, 1fr))`,
+      gap,
+      width: '100%',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────
+   BADGE
+───────────────────────────────────── */
+function Badge({ children }) {
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.4rem',
+      padding: '0.3rem 0.85rem',
+      borderRadius: '9999px',
+      fontSize: '11px',
+      fontWeight: 700,
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      background: 'rgba(15,23,42,0.08)',
+      border: '1px solid rgba(15,23,42,0.12)',
+      color: '#0f172a',
+      fontFamily: "'DM Mono', monospace",
+    }}>
+      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#2563eb', display: 'inline-block' }} />
+      {children}
+    </span>
+  );
+}
+
+/* ─────────────────────────────────────
    SECTION HEADING
 ───────────────────────────────────── */
-function SectionHeading({ eyebrow, eyebrowColor = '#38bdf8', title }) {
+function SectionHeading({ label, title, align = 'center', dark = false }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '2.5rem' }}>
-      <p style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.85rem', color: eyebrowColor, fontFamily: "'DM Sans', sans-serif" }}>
-        {eyebrow}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'center' ? 'center' : 'flex-start', textAlign: align, marginBottom: '3rem' }}>
+      <p style={{
+        fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase',
+        color: dark ? 'rgba(255,255,255,0.45)' : '#2563eb',
+        marginBottom: '0.75rem', fontFamily: "'DM Mono', monospace",
+      }}>
+        {label}
       </p>
-      <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em', maxWidth: '40rem', lineHeight: 1.15, fontFamily: "'Sora', sans-serif" }}>
+      <h2 style={{
+        fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)',
+        fontWeight: 800,
+        color: dark ? '#ffffff' : '#0f172a',
+        letterSpacing: '-0.035em',
+        lineHeight: 1.15,
+        maxWidth: '38rem',
+        fontFamily: "'Bricolage Grotesque', sans-serif",
+        margin: 0,
+      }}>
         {title}
       </h2>
     </div>
@@ -252,31 +153,8 @@ function SectionHeading({ eyebrow, eyebrowColor = '#38bdf8', title }) {
 function Divider() {
   return (
     <Container>
-      <div style={{ height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)' }} />
+      <div style={{ height: '1px', background: 'rgba(15,23,42,0.08)' }} />
     </Container>
-  );
-}
-
-/* ─────────────────────────────────────
-   RESPONSIVE GRID
-   Uses inline styles so it works even
-   when Tailwind purges the grid classes.
-───────────────────────────────────── */
-function ResponsiveGrid({ cols = { mobile: 1, desktop: 3 }, gap = '1.5rem', children }) {
-  const isDesktop = useBreakpoint(768);
-  const columns = isDesktop ? cols.desktop : cols.mobile;
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gap,
-        width: '100%',
-        boxSizing: 'border-box',
-      }}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -310,233 +188,231 @@ export default function App() {
   };
 
   const stats = [
-    { icon: Activity, value: '10x',  label: 'Faster Onboarding', color: '#38bdf8' },
-    { icon: Cpu,      value: '100%', label: 'Any Language',       color: '#818cf8' },
-    { icon: Zap,      value: '<5s',  label: 'Analysis Time',      color: '#c084fc' },
-    { icon: Shield,   value: 'OSS',  label: 'Open Source',        color: '#34d399' },
+    { icon: Activity, value: '10×', label: 'Faster onboarding', color: '#2563eb' },
+    { icon: Cpu, value: '100%', label: 'Language agnostic', color: '#7c3aed' },
+    { icon: Zap, value: '<5s', label: 'Analysis time', color: '#059669' },
+    { icon: Shield, value: 'OSS', label: 'Open source ready', color: '#dc2626' },
   ];
 
   const features = [
     {
-      icon: Code2,
-      title: 'Deep Code Analysis',
-      color: '#38bdf8',
+      icon: Code2, title: 'Deep Code Analysis', color: '#2563eb',
       desc: 'Semantic embeddings reveal architecture, patterns, and logic across every source file in the repository.',
     },
     {
-      icon: Network,
-      title: 'Dependency Mapping',
-      color: '#818cf8',
-      desc: 'Interactive graph of all components, modules and their real-time interdependencies visualized clearly.',
+      icon: Network, title: 'Dependency Mapping', color: '#7c3aed',
+      desc: 'Visualise all components, modules and their interdependencies in a clear, navigable graph.',
     },
     {
-      icon: Zap,
-      title: 'Instant AI Insights',
-      color: '#c084fc',
+      icon: Zap, title: 'Instant AI Answers', color: '#059669',
       desc: 'Natural language queries — uncover bugs, trace logic flows, and accelerate code reviews in seconds.',
     },
   ];
 
   const steps = [
-    {
-      icon: Github,
-      num: 1,
-      title: 'Paste URL',
-      desc: 'Drop any public GitHub repository URL into the search bar and hit Analyze.',
-    },
-    {
-      icon: Cpu,
-      num: 2,
-      title: 'AI Indexes',
-      desc: 'We clone, chunk, embed, and index every source file instantly via FAISS vector search.',
-    },
-    {
-      icon: MessageSquare,
-      num: 3,
-      title: 'Ask Anything',
-      desc: 'Chat naturally about architecture, logic, bugs — get instant context-aware answers.',
-    },
+    { icon: Github, num: '01', title: 'Paste a URL', desc: 'Drop any public GitHub repository URL and hit Analyze.' },
+    { icon: Cpu, num: '02', title: 'AI Indexes', desc: 'We clone, chunk, embed and index every source file via FAISS vector search.' },
+    { icon: MessageSquare, num: '03', title: 'Ask Anything', desc: 'Chat naturally about architecture, logic, bugs — get context-aware answers instantly.' },
+  ];
+
+  const terminalLines = [
+    { prefix: '$', text: 'reposense analyze github.com/vercel/next.js', color: '#e2e8f0' },
+    { prefix: '→', text: 'Cloning repository...', color: '#94a3b8' },
+    { prefix: '→', text: 'Indexing 2,847 files across 312 modules', color: '#94a3b8' },
+    { prefix: '→', text: 'Building FAISS vector index...', color: '#94a3b8' },
+    { prefix: '✓', text: 'Ready. Ask anything about your codebase.', color: '#34d399' },
   ];
 
   return (
-    <div
-      className="selection:bg-sky-500/20"
-      style={{
-        minHeight: '100vh',
-        background: '#020617',
-        color: '#f8fafc',
-        overflowX: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: '18px',
-      }}
-    >
+    <div style={{
+      minHeight: '100vh',
+      background: '#ffffff',
+      color: '#0f172a',
+      overflowX: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
 
-      {/* ── keyframes ── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
-        * { font-family: 'DM Sans', sans-serif; }
-        h1, h2, h3, .display-font { font-family: 'Sora', sans-serif; }
+        *, *::before, *::after { box-sizing: border-box; }
 
-        @keyframes shimmer-kf {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-        .shimmer-text {
-          background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #38bdf8);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: shimmer-kf 4s linear infinite;
-        }
         @keyframes blink-kf { 0%,100%{opacity:1} 50%{opacity:0} }
-        .cursor-blink { animation: blink-kf 1.1s ease-in-out infinite; }
-        @keyframes ring-kf  { 0%{transform:scale(1);opacity:.75} 100%{transform:scale(2.5);opacity:0} }
-        .pulse-ring  { animation: ring-kf 2.3s ease-out infinite; }
-        @keyframes grid-kf  { 0%,100%{opacity:.025} 50%{opacity:.05} }
-        .agrid { animation: grid-kf 8s ease-in-out infinite; }
+        .cursor { animation: blink-kf 1.05s ease-in-out infinite; color: #2563eb; }
 
-        /* ── fcard ── */
-        .fcard {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.09);
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes terminal-in {
+          from { opacity: 0; transform: translateX(12px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .feature-card {
+          background: #ffffff;
+          border: 1.5px solid rgba(15,23,42,0.08);
           border-radius: 16px;
-          backdrop-filter: blur(10px);
-          box-sizing: border-box;
-          /* 
-           * KEY FIX: min-width:0 prevents a flex/grid child from overflowing
-           * its cell. Without this, long content or nested flex containers
-           * can force the item wider than its grid column.
-           */
+          padding: 2rem 1.75rem;
           min-width: 0;
-          transition: transform .28s cubic-bezier(.34,1.56,.64,1),
-                      box-shadow .28s ease,
-                      border-color .28s ease;
+          transition: border-color 0.2s, box-shadow 0.2s, transform 0.22s;
+          cursor: default;
         }
-        .fcard:hover {
-          transform: translateY(-6px);
-          border-color: rgba(255,255,255,0.18);
-          box-shadow: 0 22px 44px rgba(0,0,0,0.4);
+        .feature-card:hover {
+          border-color: rgba(37,99,235,0.25);
+          box-shadow: 0 12px 40px rgba(37,99,235,0.09);
+          transform: translateY(-4px);
         }
 
-        /* ── glass util ── */
-        .glass {
-          background: rgba(2,6,23,0.82);
-          backdrop-filter: blur(16px);
+        .step-card {
+          background: #fafafa;
+          border: 1.5px solid rgba(15,23,42,0.07);
+          border-radius: 16px;
+          padding: 2rem 1.75rem;
+          min-width: 0;
+          transition: border-color 0.2s;
         }
-        .glass-card {
-          background: rgba(255,255,255,0.03);
-          backdrop-filter: blur(12px);
+        .step-card:hover {
+          border-color: rgba(15,23,42,0.14);
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 1.75rem 1.25rem;
+          border-radius: 14px;
+          background: #fafafa;
+          border: 1.5px solid rgba(15,23,42,0.07);
+          min-width: 0;
+          transition: box-shadow 0.2s, transform 0.22s;
+        }
+        .stat-item:hover {
+          box-shadow: 0 8px 30px rgba(15,23,42,0.08);
+          transform: translateY(-3px);
+        }
+
+        .cta-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.55rem;
+          padding: 0.875rem 2rem;
+          border-radius: 10px;
+          font-weight: 700;
+          font-size: 0.95rem;
+          font-family: 'DM Sans', sans-serif;
+          cursor: pointer;
+          border: none;
+          transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+        .cta-btn-primary {
+          background: #0f172a;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(15,23,42,0.18);
+        }
+        .cta-btn-primary:hover {
+          background: #1e293b;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(15,23,42,0.22);
+        }
+        .cta-btn-secondary {
+          background: #ffffff;
+          color: #0f172a;
+          border: 1.5px solid rgba(15,23,42,0.14) !important;
+        }
+        .cta-btn-secondary:hover {
+          border-color: rgba(15,23,42,0.3) !important;
+          transform: translateY(-2px);
+        }
+
+        .nav-tab {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.4rem 0.875rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1.5px solid transparent;
+          transition: all 0.18s;
+          font-family: 'DM Sans', sans-serif;
+        }
+
+        .dot-grid {
+          background-image: radial-gradient(circle, rgba(15,23,42,0.1) 1px, transparent 1px);
+          background-size: 24px 24px;
         }
       `}</style>
-
-      {/* ── fixed background ── */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-
-        {/* twinkling starfield */}
-        <StarCanvas />
-
-        {/* subtle grid */}
-        <div className="agrid" style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),
-                           linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)`,
-          backgroundSize: '72px 72px',
-        }} />
-
-        {/* soft corner glows — just for depth, no animation */}
-        <div style={{
-          position: 'absolute', top: '-12rem', left: '-12rem',
-          width: '600px', height: '600px', borderRadius: '50%',
-          background: 'radial-gradient(circle,rgba(56,189,248,0.06) 0%,transparent 70%)',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-12rem', right: '-12rem',
-          width: '600px', height: '600px', borderRadius: '50%',
-          background: 'radial-gradient(circle,rgba(129,140,248,0.06) 0%,transparent 70%)',
-        }} />
-
-      </div>
 
       {/* ══════════════════════════════════════
           NAVBAR
       ══════════════════════════════════════ */}
-      <header className="glass" style={{
+      <header style={{
         position: 'sticky', top: 0, zIndex: 30,
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(15,23,42,0.08)',
       }}>
-        <Container style={{ height: '4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+        <Container style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem' }}>
 
-          {/* logo */}
+          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                position: 'absolute', inset: 0, borderRadius: '0.5rem',
-                filter: 'blur(4px)', opacity: 0.6,
-                background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-              }} />
-              <div style={{
-                position: 'relative', width: '1.75rem', height: '1.75rem',
-                borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-              }}>
-                <Github style={{ width: '0.875rem', height: '0.875rem', color: 'white' }} />
-              </div>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '8px',
+              background: '#0f172a',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <GitBranch style={{ width: '14px', height: '14px', color: '#ffffff' }} />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.03em', color: 'white', fontFamily: "'Sora', sans-serif" }}>RepoSense</span>
+            <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.03em', color: '#0f172a', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              RepoSense
+            </span>
             <span style={{
-              fontSize: '9px', padding: '0.125rem 0.375rem', borderRadius: '9999px',
-              fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-              background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)', color: '#38bdf8',
+              fontSize: '9px', padding: '2px 7px', borderRadius: '9999px',
+              fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              background: '#eff6ff', color: '#2563eb',
+              border: '1px solid #dbeafe',
               display: isDesktop ? 'inline' : 'none',
+              fontFamily: "'DM Mono', monospace",
             }}>AI</span>
           </div>
 
-          {/* compact input (repo loaded only) */}
+          {/* Compact search (post-load) */}
           {isRepoLoaded && (
             <div style={{ flex: 1, maxWidth: '28rem', margin: '0 1rem' }}>
               <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={true} />
             </div>
           )}
 
-          {/* right nav */}
+          {/* Nav right */}
           {isRepoLoaded ? (
-            <div style={{
-              display: 'flex', padding: '0.25rem', borderRadius: '0.75rem', gap: '0.125rem', flexShrink: 0,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-            }}>
+            <div style={{ display: 'flex', padding: '3px', borderRadius: '10px', gap: '2px', flexShrink: 0, background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }}>
               {[
                 { v: 'summary', label: 'Summary', Icon: FileText },
-                { v: 'chat',    label: 'Chat',    Icon: MessageSquare },
+                { v: 'chat', label: 'Chat', Icon: MessageSquare },
               ].map(({ v, label, Icon }) => (
-                <button key={v} onClick={() => setActiveView(v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.375rem',
-                    padding: '0.375rem 1rem', borderRadius: '0.5rem',
-                    fontSize: '0.75rem', fontWeight: 600,
-                    cursor: 'pointer', transition: 'all 0.2s',
-                    ...(activeView === v
-                      ? { background: 'linear-gradient(135deg,rgba(56,189,248,0.18),rgba(129,140,248,0.18))', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.25)' }
-                      : { color: 'rgba(148,163,184,0.7)', border: '1px solid transparent', background: 'transparent' }),
-                  }}>
-                  <Icon style={{ width: '0.875rem', height: '0.875rem' }} />{label}
+                <button key={v} onClick={() => setActiveView(v)} className="nav-tab"
+                  style={activeView === v
+                    ? { background: '#ffffff', color: '#0f172a', borderColor: 'rgba(15,23,42,0.1)', boxShadow: '0 1px 3px rgba(15,23,42,0.08)' }
+                    : { color: '#64748b', background: 'transparent' }}>
+                  <Icon style={{ width: '13px', height: '13px' }} />{label}
                 </button>
               ))}
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
-              {isDesktop && <a href="#" style={{ fontSize: '0.75rem', color: 'rgba(148,163,184,0.7)', textDecoration: 'none' }}>Docs</a>}
-              {isDesktop && <a href="#" style={{ fontSize: '0.75rem', color: 'rgba(148,163,184,0.7)', textDecoration: 'none' }}>GitHub</a>}
-              <button style={{
-                padding: '0.375rem 1rem', borderRadius: '0.75rem', fontSize: '0.75rem',
-                fontWeight: 700, color: 'white', cursor: 'pointer', border: 'none',
-                background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-                boxShadow: '0 0 16px rgba(56,189,248,0.3)',
-              }}>
-                Get Started
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
+              {isDesktop && (
+                <>
+                  <a href="#" style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b', textDecoration: 'none' }}>Docs</a>
+                  <a href="#" style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b', textDecoration: 'none' }}>GitHub</a>
+                </>
+              )}
+              <button className="cta-btn cta-btn-primary" style={{ padding: '0.45rem 1.1rem', fontSize: '0.8rem', borderRadius: '8px' }}>
+                Get started
               </button>
             </div>
           )}
@@ -544,116 +420,101 @@ export default function App() {
       </header>
 
       {/* ══════════════════════════════════════
-          PAGE
+          MAIN
       ══════════════════════════════════════ */}
-      <main style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+      <main style={{ flex: 1 }}>
         <AnimatePresence mode="wait">
 
-          {/* ─────────────────────────────────
-              LANDING
-          ───────────────────────────────── */}
+          {/* ─────────────── LANDING ─────────────── */}
           {!isRepoLoaded && (
-            <motion.div key="hero"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              exit={{ opacity: 0, filter: 'blur(8px)', scale: 0.98 }}
-              transition={{ duration: 0.45 }}>
+            <motion.div key="landing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}>
 
               {/* ── 1. HERO ── */}
-              <section style={{ width: '100%', paddingTop: '5rem', paddingBottom: '5rem' }}>
-                <Container>
+              <section style={{ width: '100%', padding: '6rem 0 5rem', position: 'relative', overflow: 'hidden' }}>
+                {/* Dot grid background */}
+                <div className="dot-grid" style={{
+                  position: 'absolute', inset: 0, opacity: 0.5, zIndex: 0, pointerEvents: 'none',
+                }} />
+                {/* Soft blue glow — top right */}
+                <div style={{
+                  position: 'absolute', top: '-80px', right: '-80px',
+                  width: '500px', height: '500px', borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(37,99,235,0.07) 0%, transparent 70%)',
+                  pointerEvents: 'none', zIndex: 0,
+                }} />
+
+                <Container style={{ position: 'relative', zIndex: 1 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem' }}>
 
-                    {/* live badge */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-                      className=""
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
-                        padding: '0.45rem 1.1rem', borderRadius: '9999px',
-                        fontSize: '12px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase',
-                        background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.28)', color: '#38bdf8',
-                        boxShadow: '0 0 24px rgba(56,189,248,0.12)',
-                      }}>
-                      <span style={{ position: 'relative', display: 'flex', width: '0.5rem', height: '0.5rem' }}>
-                        <span className="pulse-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#38bdf8', opacity: 0.75 }} />
-                        <span style={{ position: 'relative', width: '0.5rem', height: '0.5rem', borderRadius: '50%', background: '#38bdf8' }} />
-                      </span>
-                      Powered by Advanced AI Models
+                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                      <Badge>AI-powered code intelligence</Badge>
                     </motion.div>
 
-                    {/* headline */}
                     <motion.h1
-                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.6 }}
+                      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.55 }}
                       style={{
-                        fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center',
-                        fontSize: 'clamp(3.2rem,7vw,5.8rem)', lineHeight: 1.06, maxWidth: '820px',
-                        margin: 0, fontFamily: "'Sora', sans-serif",
+                        fontWeight: 800,
+                        fontSize: 'clamp(2.8rem, 6.5vw, 5rem)',
+                        letterSpacing: '-0.04em',
+                        lineHeight: 1.05,
+                        maxWidth: '800px',
+                        color: '#0f172a',
+                        margin: 0,
+                        fontFamily: "'Bricolage Grotesque', sans-serif",
                       }}>
-                      <span style={{ color: 'white' }}>Understand </span>
-                      <span className="shimmer-text">{typed}</span>
-                      <span className="cursor-blink" style={{ color: '#38bdf8' }}>|</span>
+                      Understand{' '}
+                      <span style={{ color: '#2563eb' }}>{typed}</span>
+                      <span className="cursor">|</span>
                     </motion.h1>
 
-                    {/* subtitle */}
                     <motion.p
-                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
-                      style={{ fontSize: '1.25rem', color: 'rgba(148,163,184,0.85)', lineHeight: 1.7, fontWeight: 400, maxWidth: '540px', margin: 0 }}>
-                      Paste a GitHub URL to analyze, visualize, and query the entire architecture using state-of-the-art AI.
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+                      style={{ fontSize: '1.15rem', color: '#64748b', lineHeight: 1.7, maxWidth: '500px', margin: 0, fontWeight: 400 }}>
+                      Paste a GitHub URL to analyze, visualize, and query any codebase with state-of-the-art AI — no setup required.
                     </motion.p>
 
-                    {/* ── BIG SEARCH BLOCK ── */}
+                    {/* ── SEARCH CARD ── */}
                     <motion.div
-                      initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                      initial={{ opacity: 0, y: 20, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: 0.36, type: 'spring', stiffness: 100, damping: 18 }}
-                      style={{ width: '100%', maxWidth: '860px', position: 'relative', marginTop: '0.75rem' }}
+                      transition={{ delay: 0.32, type: 'spring', stiffness: 120, damping: 18 }}
+                      style={{ width: '100%', maxWidth: '780px', marginTop: '0.5rem' }}
                     >
-                      {/* soft static glow behind the card */}
                       <div style={{
-                        position: 'absolute', inset: '-10px', borderRadius: '2rem',
-                        background: 'radial-gradient(ellipse at 50% 60%, rgba(56,189,248,0.13) 0%, rgba(129,140,248,0.09) 50%, transparent 80%)',
-                        pointerEvents: 'none', zIndex: 0,
-                      }} />
-
-                      {/* card */}
-                      <div style={{
-                        position: 'relative', zIndex: 1,
-                        borderRadius: '1.5rem',
-                        background: 'rgba(6,14,33,0.88)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: '0 32px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)',
-                        backdropFilter: 'blur(20px)',
+                        background: '#ffffff',
+                        border: '1.5px solid rgba(15,23,42,0.1)',
+                        borderRadius: '18px',
+                        boxShadow: '0 4px 6px -1px rgba(15,23,42,0.05), 0 16px 48px -8px rgba(15,23,42,0.1)',
                         overflow: 'hidden',
                       }}>
-
-                        {/* label row */}
+                        {/* Label */}
                         <div style={{
-                          padding: '1.1rem 1.75rem 0.9rem',
-                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          padding: '1rem 1.5rem 0.85rem',
+                          borderBottom: '1px solid rgba(15,23,42,0.07)',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
                         }}>
-                          <p style={{
-                            margin: 0,
-                            fontSize: '13px', fontWeight: 600,
-                            letterSpacing: '0.06em', textTransform: 'uppercase',
-                            color: 'rgba(56,189,248,0.65)',
-                            fontFamily: "'Sora', sans-serif",
-                          }}>
-                            Paste a GitHub repository URL to get started
-                          </p>
+                          <Search style={{ width: '13px', height: '13px', color: '#94a3b8' }} />
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', letterSpacing: '0.05em', fontFamily: "'DM Mono', monospace" }}>
+                            repository url
+                          </span>
                         </div>
 
-                        {/* input */}
-                        <div style={{ padding: '1.5rem 1.75rem 1.75rem' }}>
+                        {/* Input */}
+                        <div style={{ padding: '1.25rem 1.5rem 1.5rem' }}>
                           <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={false} />
                         </div>
 
-                        {/* trust strip */}
+                        {/* Trust strip */}
                         <div style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexWrap: 'wrap', gap: '2rem',
-                          padding: '1rem 1.75rem',
-                          borderTop: '1px solid rgba(255,255,255,0.05)',
-                          background: 'rgba(255,255,255,0.02)',
+                          flexWrap: 'wrap', gap: '1.5rem',
+                          padding: '0.875rem 1.5rem',
+                          borderTop: '1px solid rgba(15,23,42,0.06)',
+                          background: '#fafafa',
                         }}>
                           {[
                             { icon: '⚡', label: 'Indexed in seconds' },
@@ -661,259 +522,206 @@ export default function App() {
                             { icon: '🌐', label: 'Any public repo' },
                             { icon: '🤖', label: 'GPT-4o powered' },
                           ].map(({ icon, label }, i) => (
-                            <span key={i} style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-                              fontSize: '13px', color: 'rgba(148,163,184,0.5)',
-                              fontFamily: "'DM Sans', sans-serif",
-                            }}>
-                              <span>{icon}</span>{label}
+                            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '12px', color: '#94a3b8', fontFamily: "'DM Mono', monospace" }}>
+                              {icon} {label}
                             </span>
                           ))}
                         </div>
                       </div>
 
-                      {/* hint text */}
-                      <p style={{
-                        marginTop: '1rem', fontSize: '13px',
-                        color: 'rgba(71,85,105,0.7)', fontFamily: 'monospace',
-                        textAlign: 'center', letterSpacing: '0.02em',
-                      }}>
-                        e.g.&nbsp;github.com/facebook/react &nbsp;·&nbsp; github.com/vercel/next.js &nbsp;·&nbsp; github.com/openai/openai-python
+                      <p style={{ marginTop: '0.875rem', fontSize: '12px', color: '#cbd5e1', fontFamily: "'DM Mono', monospace", textAlign: 'center' }}>
+                        e.g. github.com/facebook/react · github.com/vercel/next.js
                       </p>
                     </motion.div>
-
                   </div>
                 </Container>
               </section>
 
-              {/* ══════════════════════════════
-                  2. STATS — 2 cols mobile, 4 cols desktop
-                  FIX: Use ResponsiveGrid with explicit
-                  inline CSS grid, not Tailwind classes.
-                  Each card has NO width override.
-              ══════════════════════════════ */}
-              <section style={{ width: '100%', paddingBottom: '4rem' }}>
+              {/* ── 2. STATS ── */}
+              <section style={{ padding: '0 0 5rem' }}>
                 <Container>
-                  <motion.div
-                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
-                    <ResponsiveGrid cols={{ mobile: 2, desktop: 4 }} gap="1.25rem">
+                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+                    <Grid cols={{ mobile: 2, desktop: 4 }} gap="1rem">
                       {stats.map((s, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, scale: 0.92 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.6 + i * 0.08 }}
-                          className="fcard"
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            padding: '1.75rem 1.25rem',
-                            /* NO width:100% — the grid cell controls width */
-                          }}
-                        >
-                          {/* accent bar */}
+                        <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 + i * 0.07 }}
+                          className="stat-item">
                           <div style={{
-                            width: '66%', height: '2px', borderRadius: '9999px', marginBottom: '1rem',
-                            background: `linear-gradient(90deg,transparent,${s.color},transparent)`,
-                          }} />
-                          <div style={{
-                            width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem',
-                            background: `${s.color}15`, border: `1px solid ${s.color}30`,
+                            width: '36px', height: '36px', borderRadius: '9px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            marginBottom: '0.875rem',
+                            background: `${s.color}10`, border: `1px solid ${s.color}22`,
                           }}>
-                            <s.icon style={{ color: s.color, width: '1.25rem', height: '1.25rem' }} />
+                            <s.icon style={{ width: '16px', height: '16px', color: s.color }} />
                           </div>
-                          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'white', marginBottom: '0.3rem', letterSpacing: '-0.04em', fontFamily: "'Sora', sans-serif" }}>
+                          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.05em', marginBottom: '0.25rem', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
                             {s.value}
                           </div>
-                          <div style={{ fontSize: '13px', color: 'rgba(100,116,139,0.85)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 500, lineHeight: 1.3 }}>
+                          <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}>
                             {s.label}
                           </div>
                         </motion.div>
                       ))}
-                    </ResponsiveGrid>
+                    </Grid>
                   </motion.div>
                 </Container>
               </section>
 
               <Divider />
 
-              {/* ══════════════════════════════
-                  3. FEATURE CARDS — 1 col mobile, 3 cols desktop
-                  FIX: ResponsiveGrid + cards are display:flex
-                  flex-col internally, no width override.
-              ══════════════════════════════ */}
+              {/* ── 3. FEATURE CARDS ── */}
               <Section>
-                <SectionHeading
-                  eyebrow="Core Capabilities"
-                  eyebrowColor="#38bdf8"
-                  title="Everything you need to understand any codebase"
-                />
-                <ResponsiveGrid cols={{ mobile: 1, desktop: 3 }} gap="1.5rem">
+                <SectionHeading label="Core capabilities" title="Everything you need to understand any codebase" />
+                <Grid cols={{ mobile: 1, desktop: 3 }} gap="1.25rem">
                   {features.map((f, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 22 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + i * 0.1 }}
-                      className="fcard"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        padding: '1.75rem 1.5rem',
-                        /* NO width:100% — grid cell handles it */
-                      }}
-                    >
-                      {/* top colour strip */}
+                    <motion.div key={i} className="feature-card"
+                      initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.09 }}>
                       <div style={{
-                        width: '100%', height: '2px', borderRadius: '9999px', marginBottom: '1.5rem',
-                        background: `linear-gradient(90deg,${f.color}70,transparent)`,
-                      }} />
-                      <div style={{
-                        width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem',
-                        background: `${f.color}14`, border: `1px solid ${f.color}28`,
+                        width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem',
+                        background: `${f.color}10`, border: `1.5px solid ${f.color}20`,
                       }}>
-                        <f.icon style={{ color: f.color, width: '1.25rem', height: '1.25rem' }} />
+                        <f.icon style={{ color: f.color, width: '18px', height: '18px' }} />
                       </div>
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.7rem', lineHeight: 1.3, fontFamily: "'Sora', sans-serif" }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.625rem', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
                         {f.title}
                       </h3>
-                      <p style={{ fontSize: '1.05rem', color: 'rgba(100,116,139,0.9)', lineHeight: 1.7, flex: 1, margin: 0 }}>
+                      <p style={{ fontSize: '0.925rem', color: '#64748b', lineHeight: 1.7, margin: '0 0 1.25rem', flex: 1 }}>
                         {f.desc}
                       </p>
-                      <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.125rem', fontSize: '0.95rem', fontWeight: 600, color: f.color }}>
-                        Learn more <ChevronRight style={{ width: '0.75rem', height: '0.75rem' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem', fontWeight: 600, color: f.color }}>
+                        Learn more <ChevronRight style={{ width: '13px', height: '13px' }} />
                       </div>
                     </motion.div>
                   ))}
-                </ResponsiveGrid>
+                </Grid>
               </Section>
 
               <Divider />
 
-              {/* ── 4. NETWORK GRAPH ── */}
-              <Section>
-                <SectionHeading
-                  eyebrow="Architecture Visualization"
-                  eyebrowColor="#818cf8"
-                  title="Watch your repository come alive"
-                />
-                <p style={{ fontSize: '1.1rem', color: 'rgba(100,116,139,0.8)', textAlign: 'center', marginTop: '-1.5rem', marginBottom: '2rem', maxWidth: '34rem', marginLeft: 'auto', marginRight: 'auto' }}>
-                  Interactive dependency graph — hover to repel nodes and watch files connect in real time.
-                </p>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                  style={{
-                    position: 'relative', borderRadius: '1rem', overflow: 'hidden',
-                    height: '340px',
-                    background: 'rgba(56,189,248,0.015)',
-                    border: '1px solid rgba(56,189,248,0.1)',
-                    boxShadow: '0 0 60px rgba(56,189,248,0.05),inset 0 0 60px rgba(0,0,0,0.3)',
+              {/* ── 4. TERMINAL SECTION ── */}
+              <Section style={{ background: '#0f172a', padding: '5rem 0' }}>
+                <Container>
+                  <div style={{
+                    display: 'flex', flexDirection: isDesktop ? 'row' : 'column',
+                    gap: '3.5rem', alignItems: 'center',
                   }}>
-                  <div style={{ position: 'absolute', inset: 0 }}><NetworkGraph /></div>
-                  <div style={{ position: 'absolute', top: '1rem', left: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <span style={{ position: 'relative', display: 'flex', width: '0.375rem', height: '0.375rem' }}>
-                      <span className="pulse-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#38bdf8', opacity: 0.75 }} />
-                      <span style={{ position: 'relative', width: '0.375rem', height: '0.375rem', borderRadius: '50%', background: '#38bdf8' }} />
-                    </span>
-                    <span style={{ fontSize: '9px', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(56,189,248,0.65)' }}>Live Analysis</span>
-                  </div>
-                  {/* corner accents */}
-                  {[
-                    { top: 0, left: 0, borderTop: '1px solid rgba(56,189,248,0.35)', borderLeft: '1px solid rgba(56,189,248,0.35)' },
-                    { top: 0, right: 0, borderTop: '1px solid rgba(56,189,248,0.35)', borderRight: '1px solid rgba(56,189,248,0.35)' },
-                    { bottom: 0, left: 0, borderBottom: '1px solid rgba(56,189,248,0.35)', borderLeft: '1px solid rgba(56,189,248,0.35)' },
-                    { bottom: 0, right: 0, borderBottom: '1px solid rgba(56,189,248,0.35)', borderRight: '1px solid rgba(56,189,248,0.35)' },
-                  ].map((s, i) => (
-                    <div key={i} style={{ position: 'absolute', width: '1.25rem', height: '1.25rem', ...s }} />
-                  ))}
-                  <div style={{ position: 'absolute', bottom: '1rem', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '2.5rem' }}>
-                    {[{ l: 'Nodes', v: '22' }, { l: 'Connections', v: '84' }, { l: 'Clusters', v: '5' }].map(({ l, v }, i) => (
-                      <div key={i} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 700, fontFamily: 'monospace', color: '#38bdf8' }}>{v}</div>
-                        <div style={{ fontSize: '9px', color: 'rgba(71,85,105,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
+
+                    {/* Left copy */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <SectionHeading
+                        label="How it works"
+                        title="From URL to full clarity in seconds"
+                        align="left"
+                        dark
+                      />
+                      <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.75, marginBottom: '2rem', maxWidth: '26rem' }}>
+                        RepoSense clones your repository, builds semantic vector embeddings with FAISS, and surfaces an AI chat interface tuned to your exact codebase — all without any credentials.
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                        {[
+                          { icon: GitBranch, text: 'Automatic clone & file extraction' },
+                          { icon: Layers, text: 'Semantic chunking & embedding' },
+                          { icon: Search, text: 'FAISS vector index for fast retrieval' },
+                          { icon: BarChart3, text: 'GPT-4o chat with full repo context' },
+                        ].map(({ icon: Icon, text }, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '30px', height: '30px', borderRadius: '8px', flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                            }}>
+                              <Icon style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,0.5)' }} />
+                            </div>
+                            <span style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.65)', fontFamily: "'DM Mono', monospace" }}>{text}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              </Section>
+                    </div>
 
-              <Divider />
-
-              {/* ══════════════════════════════
-                  5. HOW IT WORKS — 1 col mobile, 3 cols desktop
-                  FIX: Same ResponsiveGrid approach.
-                  Connector line clamped to desktop only.
-              ══════════════════════════════ */}
-              <Section>
-                <SectionHeading
-                  eyebrow="How It Works"
-                  eyebrowColor="#c084fc"
-                  title="From URL to full clarity in three steps"
-                />
-                <div style={{ position: 'relative' }}>
-                  {/* desktop-only connector line */}
-                  {isDesktop && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '46px',
-                      left: 'calc(16.67% + 18px)',
-                      right: 'calc(16.67% + 18px)',
-                      height: '1px',
-                      background: 'linear-gradient(90deg,rgba(56,189,248,0.3),rgba(129,140,248,0.3))',
-                      zIndex: 0,
-                    }} />
-                  )}
-                  <ResponsiveGrid cols={{ mobile: 1, desktop: 3 }} gap="1.5rem">
-                    {steps.map((s, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 18 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.1 }}
-                        className="fcard"
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          padding: '2rem 1.5rem',
-                          position: 'relative',
-                          zIndex: 1,
-                        }}
-                      >
+                    {/* Terminal */}
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
+                      style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        background: '#020617',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '14px',
+                        overflow: 'hidden',
+                        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+                        fontFamily: "'DM Mono', monospace",
+                      }}>
+                        {/* Terminal chrome */}
                         <div style={{
-                          position: 'relative', width: '3rem', height: '3rem',
-                          borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          marginBottom: '1rem',
-                          background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.18)',
+                          padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.07)',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          background: 'rgba(255,255,255,0.03)',
                         }}>
-                          <s.icon style={{ width: '1.25rem', height: '1.25rem', color: '#38bdf8' }} />
-                          <div style={{
-                            position: 'absolute', top: '-0.5rem', right: '-0.5rem',
-                            width: '1.25rem', height: '1.25rem', borderRadius: '50%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '9px', fontWeight: 700, color: 'white',
-                            background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-                            boxShadow: '0 0 8px rgba(56,189,248,0.4)',
-                          }}>
-                            {s.num}
+                          {['#ff5f57', '#febc2e', '#28c840'].map((c, i) => (
+                            <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c }} />
+                          ))}
+                          <span style={{ marginLeft: '0.5rem', fontSize: '11px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.05em' }}>
+                            reposense — bash
+                          </span>
+                        </div>
+                        {/* Terminal body */}
+                        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                          {terminalLines.map((line, i) => (
+                            <motion.div key={i}
+                              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.3 + i * 0.18 }}
+                              style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '13px' }}>
+                              <span style={{
+                                color: line.prefix === '✓' ? '#34d399' : line.prefix === '$' ? '#60a5fa' : 'rgba(255,255,255,0.2)',
+                                flexShrink: 0, fontWeight: 600,
+                              }}>{line.prefix}</span>
+                              <span style={{ color: line.color, lineHeight: 1.6 }}>{line.text}</span>
+                            </motion.div>
+                          ))}
+                          {/* Blinking cursor */}
+                          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '13px' }}>
+                            <span style={{ color: '#60a5fa' }}>$</span>
+                            <span className="cursor" style={{ color: 'rgba(255,255,255,0.5)' }}>█</span>
                           </div>
                         </div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.6rem', fontFamily: "'Sora', sans-serif" }}>
-                          {s.title}
-                        </h3>
-                        <p style={{ fontSize: '1.05rem', color: 'rgba(100,116,139,0.9)', lineHeight: 1.7, margin: 0 }}>
-                          {s.desc}
-                        </p>
-                      </motion.div>
-                    ))}
-                  </ResponsiveGrid>
-                </div>
+                      </div>
+                    </motion.div>
+
+                  </div>
+                </Container>
+              </Section>
+
+              {/* ── 5. STEPS ── */}
+              <Section>
+                <SectionHeading label="Process" title="Three steps to clarity" />
+                <Grid cols={{ mobile: 1, desktop: 3 }} gap="1.25rem">
+                  {steps.map((s, i) => (
+                    <motion.div key={i} className="step-card"
+                      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.09 }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem',
+                      }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '10px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: '#f1f5f9', border: '1.5px solid rgba(15,23,42,0.08)',
+                        }}>
+                          <s.icon style={{ width: '18px', height: '18px', color: '#475569' }} />
+                        </div>
+                        <span style={{
+                          fontSize: '2rem', fontWeight: 800, color: 'rgba(15,23,42,0.06)',
+                          letterSpacing: '-0.05em', fontFamily: "'Bricolage Grotesque', sans-serif",
+                          lineHeight: 1,
+                        }}>
+                          {s.num}
+                        </span>
+                      </div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                        {s.title}
+                      </h3>
+                      <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.7, margin: 0 }}>{s.desc}</p>
+                    </motion.div>
+                  ))}
+                </Grid>
               </Section>
 
               <Divider />
@@ -921,57 +729,65 @@ export default function App() {
               {/* ── 6. CTA BANNER ── */}
               <Section>
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                   style={{
-                    position: 'relative', borderRadius: '1rem', overflow: 'hidden',
-                    textAlign: 'center', padding: '3.5rem 2.5rem',
-                    background: 'linear-gradient(135deg,rgba(56,189,248,0.06),rgba(129,140,248,0.07),rgba(192,132,252,0.06))',
-                    border: '1px solid rgba(56,189,248,0.12)',
+                    display: 'flex', flexDirection: isDesktop ? 'row' : 'column',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '2rem',
+                    borderRadius: '18px',
+                    padding: '3rem 2.5rem',
+                    background: '#0f172a',
+                    position: 'relative',
+                    overflow: 'hidden',
                   }}>
+                  {/* subtle blue wash */}
                   <div style={{
-                    position: 'absolute', inset: 0, pointerEvents: 'none',
-                    background: 'radial-gradient(ellipse at center,rgba(56,189,248,0.05) 0%,transparent 70%)',
+                    position: 'absolute', top: '-60px', right: '-60px',
+                    width: '300px', height: '300px', borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%)',
+                    pointerEvents: 'none',
                   }} />
-                  <h2 style={{ fontSize: '2.6rem', fontWeight: 800, color: 'white', marginBottom: '1rem', letterSpacing: '-0.03em', position: 'relative', fontFamily: "'Sora', sans-serif" }}>
-                    Ready to understand your codebase?
-                  </h2>
-                  <p style={{ fontSize: '1.15rem', color: 'rgba(148,163,184,0.8)', maxWidth: '28rem', margin: '0 auto 2.25rem', position: 'relative' }}>
-                    Paste any public GitHub URL — get an AI-powered architectural breakdown in seconds. No setup required.
-                  </p>
-                  <button
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
-                      padding: '1rem 2.25rem', borderRadius: '0.875rem',
-                      fontWeight: 700, fontSize: '1.05rem', color: 'white',
-                      border: 'none', cursor: 'pointer',
-                      background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-                      boxShadow: '0 0 28px rgba(56,189,248,0.4)',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 0 44px rgba(56,189,248,0.62)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = '0 0 28px rgba(56,189,248,0.4)'; }}
-                  >
-                    Analyze a Repository <ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />
-                  </button>
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', letterSpacing: '-0.035em', fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                      Ready to understand your codebase?
+                    </h2>
+                    <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', maxWidth: '26rem', lineHeight: 1.65, margin: 0 }}>
+                      Paste any public GitHub URL and get an AI-powered architectural breakdown in seconds.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+                    <button
+                      className="cta-btn"
+                      style={{ background: '#2563eb', color: '#ffffff', boxShadow: '0 2px 8px rgba(37,99,235,0.35)' }}
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                      Analyze a repo <ArrowRight style={{ width: '15px', height: '15px' }} />
+                    </button>
+                    <button className="cta-btn" style={{ background: 'rgba(255,255,255,0.08)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.12)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.13)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}>
+                      View docs
+                    </button>
+                  </div>
                 </motion.div>
               </Section>
 
             </motion.div>
           )}
 
-          {/* ─────────────────────────────────
-              DASHBOARD (post-load)
-          ───────────────────────────────── */}
+          {/* ─────────────── DASHBOARD ─────────────── */}
           {isRepoLoaded && (
             <motion.div key="dashboard"
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-              style={{ width: '100%', padding: '1.25rem 0', height: 'calc(100vh - 64px)' }}>
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+              style={{ width: '100%', padding: '1.25rem 0', height: 'calc(100vh - 60px)' }}>
               <Container style={{ height: '100%' }}>
-                <div className="glass-card" style={{
-                  borderRadius: '1rem', overflow: 'hidden',
+                <div style={{
+                  borderRadius: '14px', overflow: 'hidden',
                   display: 'flex', flexDirection: 'column', height: '100%',
-                  boxShadow: '0 20px 60px -12px rgba(0,0,0,0.6),0 0 32px rgba(56,189,248,0.06)',
+                  border: '1.5px solid rgba(15,23,42,0.08)',
+                  boxShadow: '0 4px 6px -1px rgba(15,23,42,0.05), 0 16px 48px -8px rgba(15,23,42,0.08)',
                 }}>
                   {activeView === 'chat'
                     ? <ChatInterface isRepoLoaded={isRepoLoaded} />
@@ -989,36 +805,29 @@ export default function App() {
       ══════════════════════════════════════ */}
       {!isRepoLoaded && (
         <footer style={{
-          position: 'relative', zIndex: 10,
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(12px)',
+          borderTop: '1px solid rgba(15,23,42,0.08)',
+          background: '#ffffff',
         }}>
           <Container>
             <div style={{
               paddingTop: '1.5rem', paddingBottom: '1.5rem',
               display: 'flex', flexDirection: isDesktop ? 'row' : 'column',
-              alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
+              alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{
-                  width: '1.25rem', height: '1.25rem', borderRadius: '0.375rem',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'linear-gradient(135deg,#38bdf8,#818cf8)',
-                }}>
-                  <Github style={{ width: '0.75rem', height: '0.75rem', color: 'white' }} />
+                <div style={{ width: '20px', height: '20px', borderRadius: '6px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <GitBranch style={{ width: '10px', height: '10px', color: '#ffffff' }} />
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(100,116,139,0.7)' }}>RepoSense AI</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', fontFamily: "'Bricolage Grotesque', sans-serif" }}>RepoSense AI</span>
               </div>
-              <p style={{ fontSize: '11px', color: 'rgba(71,85,105,0.7)', fontFamily: 'monospace', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                <span>© {new Date().getFullYear()}</span>
-                <span style={{ color: 'rgba(56,189,248,0.2)' }}>·</span>
-                <span>React · FastAPI · Tailwind</span>
-                <span style={{ color: 'rgba(56,189,248,0.2)' }}>·</span>
-                <span style={{ color: 'rgba(56,189,248,0.4)' }}>GPT-4o-mini</span>
+
+              <p style={{ fontSize: '11px', color: '#cbd5e1', fontFamily: "'DM Mono', monospace", margin: 0 }}>
+                © {new Date().getFullYear()} · React · FastAPI · GPT-4o
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                 {['Privacy', 'Terms', 'GitHub'].map(l => (
-                  <a key={l} href="#" style={{ fontSize: '11px', color: 'rgba(71,85,105,0.7)', textDecoration: 'none' }}>{l}</a>
+                  <a key={l} href="#" style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'none', fontFamily: "'DM Mono', monospace" }}>{l}</a>
                 ))}
               </div>
             </div>
