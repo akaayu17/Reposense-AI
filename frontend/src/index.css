@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-[#0B1120] dark:text-slate-50 antialiased selection:bg-sky-500/30 font-sans;
+  }
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Outfit', sans-serif;
+  }
+  p, span, div, button, input {
+    font-family: 'Inter', sans-serif;
+  }
+  code, pre, .font-mono {
+    font-family: 'Fira Code', monospace;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-[#0B1120]/70 backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50;
+  }
+  .card-premium {
+    @apply bg-white dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-xl dark:shadow-none dark:hover:bg-slate-800/50 transition-all duration-300;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-600;
+}

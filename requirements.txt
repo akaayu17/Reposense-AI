@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gitpython
+faiss-cpu
+openai
+tiktoken
+numpy
+groq
