@@ -11,7 +11,8 @@ embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Groq for fast AI chat inference (Llama 3)
 groq_client = OpenAI(
-    api_key=os.environ.get("GROQ_API_KEY", "Enter your api key"),
+  
+   api_key=os.environ.get("GROQ_API_KEY", "Enter your api key"),
     base_url="https://api.groq.com/openai/v1"
 )
 
@@ -54,6 +55,12 @@ def load_files(repo_path):
             valid_exts = (".py", ".js", ".java", ".cpp", ".ts", ".jsx", ".tsx", ".md", ".json", ".html", ".css", ".ipynb", ".go", ".rs", ".txt")
             if file.endswith(valid_exts):
                 file_path = os.path.join(root, file)
+                # Skip very large files (>500 KB) to keep analysis fast
+                try:
+                    if os.path.getsize(file_path) > 500_000:
+                        continue
+                except Exception:
+                    continue
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
                         rel_path = os.path.relpath(file_path, repo_path)
@@ -82,14 +89,23 @@ def build_index(chunks):
     if not chunks:
         # Prevent crash if repo is empty
         return None, None
-        
-    embeddings = [get_embedding(chunk) for chunk in chunks]
-    dim = len(embeddings[0])
 
+    # Cap at 2000 chunks to avoid extremely long processing on huge repos
+    capped_chunks = chunks[:2000]
+
+    # Batch encode all chunks at once — much faster than one-by-one
+    embeddings = embedder.encode(
+        capped_chunks,
+        batch_size=64,
+        show_progress_bar=False,
+        convert_to_numpy=True
+    ).astype("float32")
+
+    dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
-    index.add(np.array(embeddings).astype("float32"))
+    index.add(embeddings)
 
-    return index, embeddings
+    return index, embeddings.tolist()
 
 def search(query, chunks, index, embeddings, k=3):
     if not chunks or index is None:

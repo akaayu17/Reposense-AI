@@ -383,19 +383,7 @@ export default function App() {
         @keyframes blink-kf { 0%,100%{opacity:1} 50%{opacity:0} }
         .rs-cursor { animation: blink-kf 1.05s ease-in-out infinite; }
 
-        /* ── moonlight bg particles ── */
-        @keyframes drift {
-          0%   { transform: translateY(0)   rotate(0deg); opacity: 0.5; }
-          50%  { opacity: 1; }
-          100% { transform: translateY(-32px) rotate(20deg); opacity: 0; }
-        }
-        .moon-star {
-          position: fixed;
-          border-radius: 50%;
-          background: #c7d2fe;
-          pointer-events: none;
-          animation: drift linear infinite;
-        }
+
 
         .feature-card {
           border-radius: 16px;
@@ -435,34 +423,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* ── Moonlight ambient stars (dark only) ── */}
-      <AnimatePresence>
-        {dark && [
-          { size: 3,  top: '12%', left: '8%',  delay: 0,    dur: 5   },
-          { size: 2,  top: '25%', left: '92%', delay: 1.2,  dur: 6.5 },
-          { size: 4,  top: '55%', left: '3%',  delay: 2.4,  dur: 7   },
-          { size: 2.5,top: '70%', left: '88%', delay: 0.7,  dur: 5.5 },
-          { size: 2,  top: '38%', left: '50%', delay: 3,    dur: 8   },
-          { size: 3,  top: '85%', left: '22%', delay: 1.8,  dur: 6   },
-          { size: 1.5,top: '18%', left: '75%', delay: 0.4,  dur: 4.5 },
-          { size: 2,  top: '90%', left: '65%', delay: 2.1,  dur: 7.5 },
-        ].map((s, i) => (
-          <motion.span
-            key={i}
-            className="moon-star"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              width: s.size, height: s.size,
-              top: s.top, left: s.left,
-              animationDelay: `${s.delay}s`,
-              animationDuration: `${s.dur}s`,
-              zIndex: 0,
-            }}
-          />
-        ))}
-      </AnimatePresence>
+
 
       {/* ══════════════════════════════════════
           NAVBAR
@@ -501,7 +462,7 @@ export default function App() {
           {/* Compact search (post-load) */}
           {isRepoLoaded && (
             <div style={{ flex: 1, maxWidth: '28rem', margin: '0 1rem' }}>
-              <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={true} />
+              <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={true} dark={dark} />
             </div>
           )}
 
@@ -638,7 +599,7 @@ export default function App() {
                           <span style={{ fontSize: '12px', fontWeight: 600, color: t.textFaint, letterSpacing: '0.05em', fontFamily: "'DM Mono', monospace" }}>repository url</span>
                         </div>
                         <div style={{ padding: '1.25rem 1.5rem 1.5rem' }}>
-                          <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={false} />
+                          <RepoInput onRepoLoad={handleRepoLoad} isLoading={isLoading} compact={false} dark={dark} />
                         </div>
                         <motion.div
                           animate={{ background: t.bgSub, borderTopColor: t.border }}
@@ -871,8 +832,8 @@ export default function App() {
                     : '0 4px 6px -1px rgba(15,23,42,0.05), 0 16px 48px -8px rgba(15,23,42,0.08)',
                 }}>
                   {activeView === 'chat'
-                    ? <ChatInterface isRepoLoaded={isRepoLoaded} />
-                    : <SummaryView isRepoLoaded={isRepoLoaded} files={files} />}
+                    ? <ChatInterface isRepoLoaded={isRepoLoaded} dark={dark} />
+                    : <SummaryView isRepoLoaded={isRepoLoaded} files={files} dark={dark} />}
                 </div>
               </Container>
             </motion.div>

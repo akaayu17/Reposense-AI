@@ -17,7 +17,7 @@ function useCopy(text) {
 }
 
 /* ── single message bubble ── */
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, textColor }) {
   const isUser = msg.role === 'user';
   const { copied, copy } = useCopy(msg.content);
 
@@ -64,12 +64,12 @@ function MessageBubble({ msg }) {
             ? {
                 background: 'linear-gradient(135deg,rgba(56,189,248,0.18),rgba(129,140,248,0.18))',
                 border: '1px solid rgba(56,189,248,0.28)',
-                color: '#e2e8f0',
+                color: textColor,
               }
             : {
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.09)',
-                color: '#cbd5e1',
+                color: textColor,
               }),
         }}>
           <article style={{ color: 'inherit' }}>
@@ -148,7 +148,11 @@ const SUGGESTIONS = [
 ];
 
 /* ── main component ── */
-export default function ChatInterface({ isRepoLoaded }) {
+export default function ChatInterface({ isRepoLoaded, dark = false }) {
+  // Theme-aware text colors
+  const msgText    = dark ? '#f1f5f9' : '#0f172a';
+  const mutedText  = dark ? '#94a3b8' : '#334155';
+  const inputColor = dark ? '#f1f5f9' : '#0f172a';
   const [messages, setMessages] = useState([{
     role: 'assistant',
     content: "Repository context loaded! I've indexed all source files and I'm ready to answer questions about the architecture, logic, dependencies, or anything else in the codebase.",
@@ -227,7 +231,7 @@ export default function ChatInterface({ isRepoLoaded }) {
         scrollbarWidth: 'thin', scrollbarColor: 'rgba(56,189,248,0.2) transparent',
       }}>
         <AnimatePresence initial={false}>
-          {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
+          {messages.map((msg, i) => <MessageBubble key={i} msg={msg} textColor={msgText} />)}
         </AnimatePresence>
 
         <AnimatePresence>
@@ -249,7 +253,7 @@ export default function ChatInterface({ isRepoLoaded }) {
                 margin: '0 0 1rem',
                 fontSize: '0.8rem', fontWeight: 700,
                 letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: 'rgba(203,213,225,0.8)',         /* slate-300 equivalent */
+                color: mutedText,
               }}>
                 Suggested questions
               </p>
@@ -263,7 +267,7 @@ export default function ChatInterface({ isRepoLoaded }) {
                     style={{
                       textAlign: 'left', cursor: 'pointer',
                       fontSize: '0.95rem', fontWeight: 500,
-                      color: 'rgba(203,213,225,0.9)',   /* always light, never black */
+                      color: msgText,
                       padding: '1rem 1.25rem',
                       borderRadius: '1rem',
                       background: 'rgba(255,255,255,0.05)',
@@ -279,7 +283,7 @@ export default function ChatInterface({ isRepoLoaded }) {
                       e.currentTarget.style.transform   = 'translateY(-2px)';
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.color      = 'rgba(203,213,225,0.9)';
+                      e.currentTarget.style.color      = msgText;
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
                       e.currentTarget.style.background  = 'rgba(255,255,255,0.05)';
                       e.currentTarget.style.boxShadow   = '0 2px 12px rgba(0,0,0,0.25)';
@@ -322,7 +326,7 @@ export default function ChatInterface({ isRepoLoaded }) {
             style={{
               flex: 1,
               fontSize: '1.05rem',
-              color: '#e2e8f0',                          /* always light */
+              color: inputColor,
               caretColor: '#38bdf8',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.12)',

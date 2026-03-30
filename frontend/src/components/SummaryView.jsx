@@ -3,7 +3,7 @@ import { summarizeRepo } from '../services/api';
 import { FileText, FolderOpen, Loader2, AlertTriangle, Code2, BarChart2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-function StatCard({ icon: Icon, label, value, color = '#38bdf8' }) {
+function StatCard({ icon: Icon, label, value, color = '#38bdf8', labelColor = '#475569', valueColor = '#0f172a' }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.04)',
@@ -16,18 +16,22 @@ function StatCard({ icon: Icon, label, value, color = '#38bdf8' }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Icon style={{ width: '1rem', height: '1rem', color }} />
-        <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(148,163,184,0.7)' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: labelColor }}>
           {label}
         </span>
       </div>
-      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', fontFamily: "'Sora', sans-serif" }}>
+      <div style={{ fontSize: '1.6rem', fontWeight: 800, color: valueColor, letterSpacing: '-0.03em', fontFamily: "'Sora', sans-serif" }}>
         {value}
       </div>
     </div>
   );
 }
 
-export default function SummaryView({ isRepoLoaded, files = [] }) {
+export default function SummaryView({ isRepoLoaded, files = [], dark = false }) {
+  // Theme-aware text colors
+  const bodyText  = dark ? '#f1f5f9' : '#1e293b';
+  const mutedText = dark ? '#94a3b8' : '#475569';
+  const fileText  = dark ? '#cbd5e1' : '#334155';
   const [summary, setSummary] = useState(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [error, setError] = useState(null);
@@ -125,9 +129,9 @@ export default function SummaryView({ isRepoLoaded, files = [] }) {
           transition={{ delay: 0.05 }}
           style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}
         >
-          <StatCard icon={FolderOpen} label="Files Indexed" value={files.length || summary?.file_count || '—'} color="#38bdf8" />
-          <StatCard icon={Code2} label="Language" value={summary?.primary_language || 'Multi'} color="#818cf8" />
-          <StatCard icon={BarChart2} label="Lines of Code" value={summary?.total_lines ? summary.total_lines.toLocaleString() : '—'} color="#c084fc" />
+          <StatCard icon={FolderOpen} label="Files Indexed" value={files.length || summary?.file_count || '—'} color="#38bdf8" labelColor={mutedText} valueColor={bodyText} />
+          <StatCard icon={Code2} label="Language" value={summary?.primary_language || 'Multi'} color="#818cf8" labelColor={mutedText} valueColor={bodyText} />
+          <StatCard icon={BarChart2} label="Lines of Code" value={summary?.total_lines ? summary.total_lines.toLocaleString() : '—'} color="#c084fc" labelColor={mutedText} valueColor={bodyText} />
         </motion.div>
 
         {/* AI Summary block */}
@@ -146,7 +150,7 @@ export default function SummaryView({ isRepoLoaded, files = [] }) {
             <h3 style={{ margin: '0 0 0.85rem', fontSize: '0.95rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Sora', sans-serif" }}>
               Overview
             </h3>
-            <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.75, color: 'rgba(203,213,225,0.9)', whiteSpace: 'pre-wrap' }}>
+            <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.75, color: bodyText, whiteSpace: 'pre-wrap' }}>
               {summary.summary}
             </p>
           </motion.div>
@@ -176,7 +180,7 @@ export default function SummaryView({ isRepoLoaded, files = [] }) {
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
                   padding: '0.55rem 1.5rem',
                   borderBottom: i < files.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                  fontSize: '0.88rem', color: 'rgba(148,163,184,0.8)', fontFamily: 'monospace',
+                  fontSize: '0.88rem', color: fileText, fontFamily: 'monospace',
                 }}>
                   <Code2 style={{ width: '0.875rem', height: '0.875rem', color: 'rgba(56,189,248,0.5)', flexShrink: 0 }} />
                   {f}
@@ -188,7 +192,7 @@ export default function SummaryView({ isRepoLoaded, files = [] }) {
 
         {/* Empty state when no summary at all yet */}
         {!summary && !isLoadingSummary && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(148,163,184,0.5)' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: mutedText }}>
             <FileText style={{ width: '2.5rem', height: '2.5rem', margin: '0 auto 1rem', display: 'block' }} />
             <p style={{ margin: 0, fontSize: '1rem' }}>No summary available yet.</p>
             <button

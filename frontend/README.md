@@ -1,16 +1,34 @@
-# React + Vite
+# RepoSense AI — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the RepoSense AI application.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 18** with hooks
+- **Vite 8** for dev server and bundling
+- **Framer Motion** for animations
+- **Lucide React** for icons
+- **ReactMarkdown** for rendering AI responses
+- **Tailwind CSS** for utility styling
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Runs at `http://localhost:5173`. Requires the backend to be running at `http://localhost:8000`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build
+
+```bash
+npm run build
+```
+
+Output will be in the `dist/` directory.
+
+## Environment
+
+The frontend communicates with the backend via `http://localhost:8000`.
+To change the backend URL, update `src/services/api.js`.
