@@ -105,8 +105,8 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/reposense-ai.git
-cd reposense-ai
+git clone https://github.com/akaayu17/Reposense-AI.git
+cd Reposense-AI
 ```
 
 ### 2. Backend Setup
